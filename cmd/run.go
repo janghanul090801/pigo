@@ -1,13 +1,14 @@
 /*
 Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
-	"fmt"
-
+	_const "github.com/janghanul090801/pigo/cmd/const"
 	"github.com/spf13/cobra"
+	"log"
+	"os"
+	"os/exec"
 )
 
 // runCmd represents the run command
@@ -20,8 +21,17 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
+	DisableFlagParsing: true,
+
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("run called")
+		runCmd := exec.Command(_const.PYTHONPATHWINDOW, args...)
+		runCmd.Stdout = os.Stdout
+		runCmd.Stderr = os.Stderr
+		runCmd.Stdin = os.Stdin
+
+		if err := runCmd.Run(); err != nil {
+			log.Fatalf("error: %v", err)
+		}
 	},
 }
 
