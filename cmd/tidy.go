@@ -1,5 +1,6 @@
 package cmd
 
+// TODO: pip 에서도 remove 하기
 import (
 	"bufio"
 	"encoding/json"
