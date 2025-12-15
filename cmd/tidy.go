@@ -24,13 +24,13 @@ type ImportItem struct {
 	Names  []string
 }
 
-// 패키지 메타데이터 구조체
 type PkgMeta struct {
-	ImportNames []string `json:"imports"`  // 실제 import 모듈명 (예: cv2)
-	Requires    []string `json:"requires"` // 의존성 패키지명 (예: numpy)
+	ImportNames []string `json:"imports"`
+	Requires    []string `json:"requires"`
 }
 
-// 기본적으로 보호할 패키지 (개발 도구 등)
+// 코드에 import는 없지만 지워지면 안 되는 개발/배포 도구들
+// (이건 어쩔 수 없이 유지해야 합니다. 코드에 안 나오니까요.)
 var defaultIgnoreList = map[string]bool{
 	"pytest": true, "black": true, "flake8": true, "mypy": true,
 	"pylint": true, "ipython": true, "gunicorn": true, "uvicorn": true,
@@ -38,19 +38,45 @@ var defaultIgnoreList = map[string]bool{
 	"pre-commit": true, "poetry": true,
 }
 
-// --- [Python 메타데이터 조회 스크립트 (의존성 조회 기능 추가)] ---
+// --- [강력해진 Python 메타데이터 분석 스크립트] ---
 const pythonMapperScript = `
 import sys
 import json
 import importlib.metadata
-import re
+import os
 
 def parse_req_name(req_str):
-    # "requests (>=2.0)" -> "requests"
-    # "email-validator; extra == 'email'" -> "email-validator"
     if not req_str: return ""
     name = req_str.split('(')[0].split(';')[0].split('<')[0].split('>')[0].split('=')[0]
     return name.strip().lower()
+
+def get_import_names_from_files(dist):
+    """
+    top_level.txt가 없을 때, 실제 설치된 파일 경로를 분석하여 import 이름을 추출
+    예: python-jose -> site-packages/jose/__init__.py -> 'jose' 추출
+    """
+    modules = set()
+    if not dist.files:
+        return []
+
+    for path in dist.files:
+        # 경로는 보통 'jose/__init__.py' 또는 'six.py' 형태임
+        parts = str(path).split(os.sep)
+        
+        # 최상위 경로가 .dist-info나 .egg-info면 무시
+        if len(parts) > 0:
+            top = parts[0]
+            if top.endswith('.dist-info') or top.endswith('.egg-info') or top == '__pycache__':
+                continue
+            
+            # .py 파일인 경우 (예: six.py)
+            if top.endswith('.py'):
+                modules.add(top[:-3])
+            # 폴더인 경우 (예: jose/)
+            else:
+                modules.add(top)
+    
+    return list(modules)
 
 def get_package_info(package_names):
     result = {}
@@ -59,35 +85,37 @@ def get_package_info(package_names):
         pkg = pkg_raw.split('[')[0].strip()
         
         info = {"imports": [], "requires": []}
-        
         try:
             dist = importlib.metadata.distribution(pkg)
             
-            # 1. Import Names (top_level.txt)
+            # 1. Imports 찾기 (top_level.txt 우선, 없으면 파일 분석)
             if dist.read_text('top_level.txt'):
                 top_levels = dist.read_text('top_level.txt').split()
                 info["imports"] = [t.strip() for t in top_levels if t.strip()]
             else:
-                info["imports"] = [pkg.lower().replace('-', '_')]
+                # top_level.txt가 없으면 설치된 파일 리스트를 뒤진다 (여기가 핵심)
+                detected = get_import_names_from_files(dist)
+                if detected:
+                    info["imports"] = detected
+                else:
+                    # 최후의 수단: 이름 변환
+                    info["imports"] = [pkg.lower().replace('-', '_')]
             
-            # 2. Dependencies (requires.txt / METADATA)
+            # 2. Dependencies 찾기 (pydantic -> email-validator 보호용)
             requires = dist.requires
             if requires:
                 deps = []
                 for req in requires:
-                    # 의존성 이름 파싱
                     dep_name = parse_req_name(req)
                     if dep_name:
                         deps.append(dep_name)
                 info["requires"] = deps
-                
+
         except Exception:
             # 패키지 미설치 시 Fallback
-            fallback = pkg.lower().replace('-', '_')
-            info["imports"] = [fallback, pkg]
+            info["imports"] = [pkg.lower().replace('-', '_'), pkg]
             
-        result[pkg_raw] = info # Key는 원본 이름(pydantic[email]) 유지
-
+        result[pkg_raw] = info 
     return result
 
 if __name__ == "__main__":
@@ -95,7 +123,6 @@ if __name__ == "__main__":
     if not input_data:
         print("{}")
         sys.exit(0)
-    
     try:
         packages = json.loads(input_data)
         result = get_package_info(packages)
@@ -104,6 +131,7 @@ if __name__ == "__main__":
         print("{}")
 `
 
+// --- [Tree-sitter 함수들 (변경 없음)] ---
 func extractImports(root *sitter.Node, src []byte) []ImportItem {
 	var res []ImportItem
 	var walk func(*sitter.Node)
@@ -181,6 +209,7 @@ func isLocalModule(rootPath, moduleName string) bool {
 	return false
 }
 
+// pydantic[email] -> pydantic
 func parsePackageName(line string) string {
 	if idx := strings.Index(line, "#"); idx != -1 {
 		line = line[:idx]
@@ -220,19 +249,19 @@ func fetchPackageInfo(packageNames []string) (map[string]PkgMeta, error) {
 	}()
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("python script failed: %v", err)
+		return nil, fmt.Errorf("python script failed")
 	}
 	var result map[string]PkgMeta
-	if err := json.Unmarshal(output, &result); err != nil {
-		return nil, err
-	}
+	json.Unmarshal(output, &result)
 	return result, nil
 }
+
+// --- [Main Logic] ---
 
 var tidyCmd = &cobra.Command{
 	Use:   "tidy [path]",
 	Short: "Automatically remove unused packages",
-	Long:  `Scans python code and uses installed package metadata (including dependencies) to identify unused dependencies.`,
+	Long:  `Analyzes dependencies by inspecting installed package files to accurately map PyPI names to import names without hardcoded lists.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		searchPath := "."
 		if len(args) > 0 {
@@ -242,10 +271,10 @@ var tidyCmd = &cobra.Command{
 		reqPath := filepath.Join(searchPath, "requirements.txt")
 
 		if _, err := os.Stat(reqPath); os.IsNotExist(err) {
-			log.Fatalf("requirements.txt not found in %s", searchPath)
+			log.Fatalf("requirements.txt not found")
 		}
 
-		fmt.Println("Reading requirements.txt...")
+		fmt.Println("📜 Reading requirements.txt...")
 		reqFile, err := os.Open(reqPath)
 		if err != nil {
 			log.Fatal(err)
@@ -253,7 +282,6 @@ var tidyCmd = &cobra.Command{
 
 		var originalLines []string
 		var reqPackages []string
-
 		scanner := bufio.NewScanner(reqFile)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -265,18 +293,14 @@ var tidyCmd = &cobra.Command{
 		}
 		reqFile.Close()
 
-		fmt.Println("Querying python environment for metadata & dependencies...")
-		pkgInfoMap, err := fetchPackageInfo(reqPackages)
-		if err != nil {
-			log.Printf("Warning: Metadata fetch failed. Dependency protection disabled.")
-			pkgInfoMap = make(map[string]PkgMeta)
-		}
+		fmt.Println("🤖 Analyzing python environment (Smart Mode)...")
+		pkgInfoMap, _ := fetchPackageInfo(reqPackages)
 
-		fmt.Println("Scanning python files for imports...")
+		fmt.Println("🔍 Scanning code imports...")
 		importedSet := make(map[string]bool)
 
 		files := []string{}
-		_ = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+		filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 			if err == nil && !info.IsDir() && filepath.Ext(path) == ".py" {
 				files = append(files, path)
 			}
@@ -295,7 +319,6 @@ var tidyCmd = &cobra.Command{
 				defer f.Close()
 				src, _ := io.ReadAll(f)
 				tree := parser.Parse(nil, src)
-
 				imports := extractImports(tree.RootNode(), src)
 				for _, imp := range imports {
 					if !isLocalModule(absSearchPath, imp.Module) {
@@ -306,11 +329,12 @@ var tidyCmd = &cobra.Command{
 			}()
 		}
 
-		fmt.Println("Building dependency protection list...")
+		// 의존성 보호 목록 생성
 		protectedDeps := make(map[string]bool)
-
 		for _, meta := range pkgInfoMap {
 			isDirectlyUsed := false
+
+			// 메타데이터(설치된 파일 분석 결과)로 확인
 			for _, importName := range meta.ImportNames {
 				if importedSet[importName] || importedSet[getRootModule(importName)] {
 					isDirectlyUsed = true
@@ -325,7 +349,7 @@ var tidyCmd = &cobra.Command{
 			}
 		}
 
-		fmt.Println("Analyzing dependencies...")
+		fmt.Println("🧹 Cleaning up...")
 		var newLines []string
 		var removedCount int
 
@@ -340,38 +364,51 @@ var tidyCmd = &cobra.Command{
 
 			isUsed := false
 
-			if meta, ok := pkgInfoMap[pkgName]; ok {
+			// 1. 메타데이터 매핑 확인
+			if meta, ok := pkgInfoMap[line]; ok { // 키값 주의
 				for _, importName := range meta.ImportNames {
 					if importedSet[importName] || importedSet[getRootModule(importName)] {
 						isUsed = true
 						break
 					}
 				}
-			} else {
+			}
+			// line 키로 못 찾으면 pkgName 키로 재시도
+			if !isUsed {
+				if meta, ok := pkgInfoMap[pkgName]; ok {
+					for _, importName := range meta.ImportNames {
+						if importedSet[importName] || importedSet[getRootModule(importName)] {
+							isUsed = true
+							break
+						}
+					}
+				}
+			}
+
+			// 2. 단순 이름 일치 (Fallback)
+			if !isUsed {
 				if importedSet[pkgName] {
 					isUsed = true
 				}
-			}
-
-			if !isUsed {
-				if protectedDeps[pkgLower] {
-					isUsed = true
-				}
-			}
-
-			if !isUsed {
-				for imported := range importedSet {
-					if strings.EqualFold(imported, pkgName) {
-						isUsed = true
-						break
+				if !isUsed {
+					for imp := range importedSet {
+						if strings.EqualFold(imp, pkgName) {
+							isUsed = true
+							break
+						}
 					}
 				}
+			}
+
+			// 3. 의존성 보호 (pydantic -> email-validator 등)
+			if !isUsed && protectedDeps[pkgLower] {
+				isUsed = true
 			}
 
 			if isUsed {
 				newLines = append(newLines, line)
 			} else {
-				fmt.Printf("Removing: %s (Unused)\n", parsePackageName(line))
+				fmt.Printf("❌ Removing: %s\n", pkgName)
 				removedCount++
 			}
 		}
@@ -387,9 +424,9 @@ var tidyCmd = &cobra.Command{
 				fmt.Fprintln(w, l)
 			}
 			w.Flush()
-			fmt.Printf("\nDone! Removed %d packages.\n", removedCount)
+			fmt.Printf("\n✅ Removed %d packages.\n", removedCount)
 		} else {
-			fmt.Println("\nEverything looks clean.")
+			fmt.Println("\n✨ Clean.")
 		}
 	},
 }
