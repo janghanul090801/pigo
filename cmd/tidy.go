@@ -1,11 +1,9 @@
 package cmd
 
-// TODO: pip 에서도 remove 하기
 import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	_const "github.com/janghanul090801/pigo/cmd/const"
 	"io"
 	"log"
 	"os"
@@ -15,7 +13,7 @@ import (
 	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
-	"github.com/smacker/go-tree-sitter/python"
+	python "github.com/smacker/go-tree-sitter/python"
 	"github.com/spf13/cobra"
 )
 
@@ -26,52 +24,84 @@ type ImportItem struct {
 	Names  []string
 }
 
-// 개발용 도구 등은 코드에서 import 하지 않아도 지우면 안 되므로 예외 리스트 정의
+// 패키지 메타데이터 구조체
+type PkgMeta struct {
+	ImportNames []string `json:"imports"`  // 실제 import 모듈명 (예: cv2)
+	Requires    []string `json:"requires"` // 의존성 패키지명 (예: numpy)
+}
+
+// 기본적으로 보호할 패키지 (개발 도구 등)
 var defaultIgnoreList = map[string]bool{
 	"pytest": true, "black": true, "flake8": true, "mypy": true,
 	"pylint": true, "ipython": true, "gunicorn": true, "uvicorn": true,
 	"wheel": true, "setuptools": true, "pip": true, "tox": true,
+	"pre-commit": true, "poetry": true,
 }
 
-// --- [Python 메타데이터 조회 스크립트] ---
-// Go에서 실행할 파이썬 코드입니다. 표준 입력으로 패키지 리스트를 받고, JSON으로 매핑을 반환합니다.
+// --- [Python 메타데이터 조회 스크립트 (의존성 조회 기능 추가)] ---
 const pythonMapperScript = `
 import sys
 import json
 import importlib.metadata
+import re
 
-def get_import_names(package_names):
-    mapping = {}
-    for pkg in package_names:
+def parse_req_name(req_str):
+    # "requests (>=2.0)" -> "requests"
+    # "email-validator; extra == 'email'" -> "email-validator"
+    if not req_str: return ""
+    name = req_str.split('(')[0].split(';')[0].split('<')[0].split('>')[0].split('=')[0]
+    return name.strip().lower()
+
+def get_package_info(package_names):
+    result = {}
+    for pkg_raw in package_names:
+        # 안전장치: pydantic[email] -> pydantic
+        pkg = pkg_raw.split('[')[0].strip()
+        
+        info = {"imports": [], "requires": []}
+        
         try:
-            # 패키지 메타데이터에서 top-level 모듈 이름들을 가져옴
             dist = importlib.metadata.distribution(pkg)
-            # top_level.txt가 있는 경우 (대부분의 패키지)
+            
+            # 1. Import Names (top_level.txt)
             if dist.read_text('top_level.txt'):
                 top_levels = dist.read_text('top_level.txt').split()
-                # 윈도우/리눅스 개행 문자 처리 및 공백 제거
-                mapping[pkg] = [t.strip() for t in top_levels if t.strip()]
+                info["imports"] = [t.strip() for t in top_levels if t.strip()]
             else:
-                # 메타데이터는 있지만 top_level이 명시되지 않은 경우 패키지 이름 그대로 사용 (fallback)
-                mapping[pkg] = [pkg.lower().replace('-', '_')]
-        except importlib.metadata.PackageNotFoundError:
-            # 설치되지 않은 패키지는 추측 (이름 그대로 or 소문자)
-            mapping[pkg] = [pkg, pkg.lower().replace('-', '_')]
-        except Exception:
-            mapping[pkg] = [pkg.lower()]
+                info["imports"] = [pkg.lower().replace('-', '_')]
             
-    return mapping
+            # 2. Dependencies (requires.txt / METADATA)
+            requires = dist.requires
+            if requires:
+                deps = []
+                for req in requires:
+                    # 의존성 이름 파싱
+                    dep_name = parse_req_name(req)
+                    if dep_name:
+                        deps.append(dep_name)
+                info["requires"] = deps
+                
+        except Exception:
+            # 패키지 미설치 시 Fallback
+            fallback = pkg.lower().replace('-', '_')
+            info["imports"] = [fallback, pkg]
+            
+        result[pkg_raw] = info # Key는 원본 이름(pydantic[email]) 유지
+
+    return result
 
 if __name__ == "__main__":
-    # Stdin에서 패키지 리스트 읽기 (JSON array strings)
     input_data = sys.stdin.read()
     if not input_data:
         print("{}")
         sys.exit(0)
     
-    packages = json.loads(input_data)
-    result = get_import_names(packages)
-    print(json.dumps(result))
+    try:
+        packages = json.loads(input_data)
+        result = get_package_info(packages)
+        print(json.dumps(result))
+    except Exception:
+        print("{}")
 `
 
 func extractImports(root *sitter.Node, src []byte) []ImportItem {
@@ -142,7 +172,6 @@ func isLocalModule(rootPath, moduleName string) bool {
 	}
 	relPath := strings.ReplaceAll(moduleName, ".", string(os.PathSeparator))
 	absPath := filepath.Join(rootPath, relPath)
-
 	if _, err := os.Stat(absPath + ".py"); err == nil {
 		return true
 	}
@@ -152,7 +181,6 @@ func isLocalModule(rootPath, moduleName string) bool {
 	return false
 }
 
-// --- [패키지 이름 파싱] ---
 func parsePackageName(line string) string {
 	if idx := strings.Index(line, "#"); idx != -1 {
 		line = line[:idx]
@@ -163,7 +191,12 @@ func parsePackageName(line string) string {
 	}
 	re := regexp.MustCompile(`([<>=~;]+)`)
 	parts := re.Split(line, 2)
-	return strings.TrimSpace(parts[0])
+	pkgName := strings.TrimSpace(parts[0])
+
+	if idx := strings.Index(pkgName, "["); idx != -1 {
+		pkgName = strings.TrimSpace(pkgName[:idx])
+	}
+	return pkgName
 }
 
 func getRootModule(moduleName string) string {
@@ -171,48 +204,35 @@ func getRootModule(moduleName string) string {
 	return parts[0]
 }
 
-// --- [Python 실행 헬퍼 함수] ---
-func fetchPackageMappings(packageNames []string) (map[string][]string, error) {
-	// 1. 패키지 리스트를 JSON으로 변환
+func fetchPackageInfo(packageNames []string) (map[string]PkgMeta, error) {
 	inputJSON, err := json.Marshal(packageNames)
 	if err != nil {
 		return nil, err
 	}
-
-	// 2. Python 프로세스 실행
-	cmd := exec.Command(_const.PYTHONPATHWINDOW, "-c", pythonMapperScript) // 혹은 "python3"
+	cmd := exec.Command("python", "-c", pythonMapperScript)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
 	}
-
-	// 3. Stdin으로 데이터 전달
 	go func() {
 		defer stdin.Close()
 		io.WriteString(stdin, string(inputJSON))
 	}()
-
-	// 4. Stdout 결과 읽기
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to run python script: %v (make sure packages are installed in current env)", err)
+		return nil, fmt.Errorf("python script failed: %v", err)
 	}
-
-	// 5. 결과 파싱
-	var result map[string][]string
+	var result map[string]PkgMeta
 	if err := json.Unmarshal(output, &result); err != nil {
 		return nil, err
 	}
-
 	return result, nil
 }
-
-// --- [Main Logic] ---
 
 var tidyCmd = &cobra.Command{
 	Use:   "tidy [path]",
 	Short: "Automatically remove unused packages",
-	Long:  `Scans python code and uses installed package metadata to accurately identify and remove unused dependencies from requirements.txt.`,
+	Long:  `Scans python code and uses installed package metadata (including dependencies) to identify unused dependencies.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		searchPath := "."
 		if len(args) > 0 {
@@ -225,6 +245,7 @@ var tidyCmd = &cobra.Command{
 			log.Fatalf("requirements.txt not found in %s", searchPath)
 		}
 
+		fmt.Println("Reading requirements.txt...")
 		reqFile, err := os.Open(reqPath)
 		if err != nil {
 			log.Fatal(err)
@@ -237,7 +258,6 @@ var tidyCmd = &cobra.Command{
 		for scanner.Scan() {
 			line := scanner.Text()
 			originalLines = append(originalLines, line)
-
 			pkgName := parsePackageName(line)
 			if pkgName != "" {
 				reqPackages = append(reqPackages, pkgName)
@@ -245,17 +265,19 @@ var tidyCmd = &cobra.Command{
 		}
 		reqFile.Close()
 
-		pkgMapping, err := fetchPackageMappings(reqPackages)
+		fmt.Println("Querying python environment for metadata & dependencies...")
+		pkgInfoMap, err := fetchPackageInfo(reqPackages)
 		if err != nil {
-			log.Printf("Warning: Could not fetch metadata automatically (%v). Fallback to name matching.", err)
-			pkgMapping = make(map[string][]string)
+			log.Printf("Warning: Metadata fetch failed. Dependency protection disabled.")
+			pkgInfoMap = make(map[string]PkgMeta)
 		}
 
+		fmt.Println("Scanning python files for imports...")
 		importedSet := make(map[string]bool)
 
 		files := []string{}
 		_ = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
-			if err == nil && !info.IsDir() && filepath.Ext(path) == ".py" && !strings.Contains(path, ".venv") {
+			if err == nil && !info.IsDir() && filepath.Ext(path) == ".py" {
 				files = append(files, path)
 			}
 			return nil
@@ -284,38 +306,64 @@ var tidyCmd = &cobra.Command{
 			}()
 		}
 
+		fmt.Println("Building dependency protection list...")
+		protectedDeps := make(map[string]bool)
+
+		for _, meta := range pkgInfoMap {
+			isDirectlyUsed := false
+			for _, importName := range meta.ImportNames {
+				if importedSet[importName] || importedSet[getRootModule(importName)] {
+					isDirectlyUsed = true
+					break
+				}
+			}
+
+			if isDirectlyUsed {
+				for _, dep := range meta.Requires {
+					protectedDeps[strings.ToLower(dep)] = true
+				}
+			}
+		}
+
+		fmt.Println("Analyzing dependencies...")
 		var newLines []string
 		var removedCount int
 
 		for _, line := range originalLines {
 			pkgName := parsePackageName(line)
+			pkgLower := strings.ToLower(pkgName)
 
-			if pkgName == "" || defaultIgnoreList[strings.ToLower(pkgName)] {
+			if pkgName == "" || defaultIgnoreList[pkgLower] {
 				newLines = append(newLines, line)
 				continue
 			}
 
 			isUsed := false
 
-			if mappedNames, ok := pkgMapping[pkgName]; ok {
-				for _, mappedName := range mappedNames {
-					if importedSet[mappedName] || importedSet[getRootModule(mappedName)] {
+			if meta, ok := pkgInfoMap[pkgName]; ok {
+				for _, importName := range meta.ImportNames {
+					if importedSet[importName] || importedSet[getRootModule(importName)] {
 						isUsed = true
 						break
 					}
 				}
-			}
-
-			if !isUsed {
+			} else {
 				if importedSet[pkgName] {
 					isUsed = true
 				}
-				if !isUsed {
-					for imported := range importedSet {
-						if strings.EqualFold(imported, pkgName) {
-							isUsed = true
-							break
-						}
+			}
+
+			if !isUsed {
+				if protectedDeps[pkgLower] {
+					isUsed = true
+				}
+			}
+
+			if !isUsed {
+				for imported := range importedSet {
+					if strings.EqualFold(imported, pkgName) {
+						isUsed = true
+						break
 					}
 				}
 			}
@@ -323,7 +371,7 @@ var tidyCmd = &cobra.Command{
 			if isUsed {
 				newLines = append(newLines, line)
 			} else {
-				fmt.Printf("Removing: %s (Not imported)\n", pkgName)
+				fmt.Printf("Removing: %s (Unused)\n", parsePackageName(line))
 				removedCount++
 			}
 		}
