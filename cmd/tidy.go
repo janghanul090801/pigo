@@ -209,7 +209,6 @@ func isLocalModule(rootPath, moduleName string) bool {
 	return false
 }
 
-// pydantic[email] -> pydantic
 func parsePackageName(line string) string {
 	if idx := strings.Index(line, "#"); idx != -1 {
 		line = line[:idx]
@@ -256,8 +255,6 @@ func fetchPackageInfo(packageNames []string) (map[string]PkgMeta, error) {
 	return result, nil
 }
 
-// --- [Main Logic] ---
-
 var tidyCmd = &cobra.Command{
 	Use:   "tidy [path]",
 	Short: "Automatically remove unused packages",
@@ -274,7 +271,7 @@ var tidyCmd = &cobra.Command{
 			log.Fatalf("requirements.txt not found")
 		}
 
-		fmt.Println("📜 Reading requirements.txt...")
+		fmt.Println("Reading requirements.txt...")
 		reqFile, err := os.Open(reqPath)
 		if err != nil {
 			log.Fatal(err)
@@ -293,10 +290,10 @@ var tidyCmd = &cobra.Command{
 		}
 		reqFile.Close()
 
-		fmt.Println("🤖 Analyzing python environment (Smart Mode)...")
+		fmt.Println("Analyzing python environment (Smart Mode)...")
 		pkgInfoMap, _ := fetchPackageInfo(reqPackages)
 
-		fmt.Println("🔍 Scanning code imports...")
+		fmt.Println("Scanning code imports...")
 		importedSet := make(map[string]bool)
 
 		files := []string{}
@@ -349,7 +346,7 @@ var tidyCmd = &cobra.Command{
 			}
 		}
 
-		fmt.Println("🧹 Cleaning up...")
+		fmt.Println("Cleaning up...")
 		var newLines []string
 		var removedCount int
 
@@ -408,7 +405,7 @@ var tidyCmd = &cobra.Command{
 			if isUsed {
 				newLines = append(newLines, line)
 			} else {
-				fmt.Printf("❌ Removing: %s\n", pkgName)
+				fmt.Printf("Removing: %s\n", pkgName)
 				removedCount++
 			}
 		}
@@ -424,9 +421,9 @@ var tidyCmd = &cobra.Command{
 				fmt.Fprintln(w, l)
 			}
 			w.Flush()
-			fmt.Printf("\n✅ Removed %d packages.\n", removedCount)
+			fmt.Printf("\nRemoved %d packages.\n", removedCount)
 		} else {
-			fmt.Println("\n✨ Clean.")
+			fmt.Println("\nClean.")
 		}
 	},
 }
