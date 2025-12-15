@@ -26,7 +26,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           version: latest
-          args: release --clean --skip=linux
+          args: release --clean --skip=builds:linux
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -50,6 +50,6 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           version: latest
-          args: release --clean --skip=windows
+          args: release --clean --skip=builds:windows
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
