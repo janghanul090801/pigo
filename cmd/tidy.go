@@ -47,6 +47,11 @@ import os
 
 def parse_req_name(req_str):
     if not req_str: return ""
+    # extra 조건이 명시된 선택적 의존성은 런타임에 필요 없으므로 제외
+    if ';' in req_str:
+        condition = req_str.split(';', 1)[1]
+        if 'extra' in condition:
+            return ""
     # PEP 508 대괄호 및 기타 조건식 처리 분할 추가
     name = req_str.split('(')[0].split(';')[0].split('<')[0].split('>')[0].split('=')[0].split('[')[0]
     return name.strip().lower()
@@ -382,7 +387,17 @@ var tidyCmd = &cobra.Command{
 
 		files := []string{}
 		filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
-			if err == nil && !info.IsDir() && filepath.Ext(path) == ".py" {
+			if err != nil {
+				return nil
+			}
+			if info.IsDir() {
+				name := info.Name()
+				if name == ".venv" || name == "venv" || name == "env" || name == ".git" || name == ".idea" || name == "__pycache__" {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if filepath.Ext(path) == ".py" {
 				files = append(files, path)
 			}
 			return nil

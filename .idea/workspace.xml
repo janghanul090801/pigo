@@ -5,8 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3a333ffc-135c-4a4b-a852-b0cb769447a8" name="변경" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmd/install.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/get.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmd/tidy.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/tidy.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmd/uninstall.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/remove.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -20,6 +23,65 @@
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.6224560730250794" />
+      <entry key="MS500" value="2.495720426317233" />
+      <entry key="S2" value="2.854136864561168" />
+      <entry key="S5" value="2.941160837906672" />
+      <entry key="S10" value="3.1490928638399986" />
+      <entry key="S30" value="8.10278196554114" />
+      <entry key="S60" value="14.934253384233035" />
+      <entry key="M2" value="21.43851721803325" />
+      <entry key="M5" value="31.549724493385426" />
+      <entry key="M10" value="49.36645528886198" />
+      <entry key="M15" value="65.98350242652762" />
+      <entry key="M30" value="98.55776731729279" />
+      <entry key="H1" value="126.03888368623821" />
+      <entry key="H2" value="144.13069723885422" />
+      <entry key="H4" value="154.5442165090895" />
+      <entry key="D1" value="164.01374056876128" />
+      <entry key="W1" value="165.71430097815664" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="5.601032539771082E-135" />
+      <entry key="S10" value="7.48400463640361E-68" />
+      <entry key="S30" value="4.214163189984535E-23" />
+      <entry key="S60" value="6.491658640120053E-12" />
+      <entry key="M2" value="2.5478733563739076E-6" />
+      <entry key="M5" value="0.005787235226276334" />
+      <entry key="M10" value="0.07607388005272464" />
+      <entry key="M15" value="0.1795382736776343" />
+      <entry key="M30" value="0.423719569618438" />
+      <entry key="H1" value="0.6509374544596735" />
+      <entry key="H2" value="0.8068069499326794" />
+      <entry key="H4" value="0.8982243316302883" />
+      <entry key="D1" value="0.9822698242788623" />
+      <entry key="W1" value="0.9974476573183494" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="1.5162039118671102" />
+      <entry key="MS500" value="2.4611137539216315" />
+      <entry key="S2" value="2.8440054783369577" />
+      <entry key="S5" value="2.9369625673893576" />
+      <entry key="S10" value="3.146820373039138" />
+      <entry key="S30" value="8.100566941707527" />
+      <entry key="S60" value="14.932117399169785" />
+      <entry key="M2" value="21.43691660957547" />
+      <entry key="M5" value="31.55402875109351" />
+      <entry key="M10" value="49.4405282795226" />
+      <entry key="M15" value="66.16086040622625" />
+      <entry key="M30" value="98.97955895445826" />
+      <entry key="H1" value="126.68850501977651" />
+      <entry key="H2" value="144.93673074430055" />
+      <entry key="H4" value="155.44202100824313" />
+      <entry key="D1" value="164.99593541276798" />
+      <entry key="W1" value="166.71173779566425" />
+    </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
@@ -47,7 +109,7 @@
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "master",
+    "git-widget-placeholder": "refactor/tidy",
     "go.import.settings.migrated": "true",
     "go.sdk.automatically.set": "true",
     "ignore.virus.scanning.warn.message": "true",
@@ -59,11 +121,22 @@
     "to.speed.mode.migration.done": "true"
   }
 }]]></component>
+  <component name="RunManager">
+    <configuration name="go build github.com/janghanul090801/pigo" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
+      <module name="pigo" />
+      <working_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <package value="github.com/janghanul090801/pigo" />
+      <directory value="$PROJECT_DIR$" />
+      <auto_managed_config_id value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-gosdk-72a9cf600ed8-3dd3895e5e08-org.jetbrains.plugins.go.sharedIndexes.bundled-GO-261.23567.143" />
-        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-GO-261.23567.143" />
+        <option value="bundled-gosdk-72a9cf600ed8-3dd3895e5e08-org.jetbrains.plugins.go.sharedIndexes.bundled-GO-261.26222.72" />
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-GO-261.26222.72" />
       </set>
     </attachedChunks>
   </component>
