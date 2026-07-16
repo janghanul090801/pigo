@@ -5,14 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3a333ffc-135c-4a4b-a852-b0cb769447a8" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/discord.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/discord.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/pigo.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmd/tidy.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/tidy.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/py/main.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/py/requirements.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -23,6 +17,69 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.6727050672018124" />
+      <entry key="MS500" value="2.8764723275565487" />
+      <entry key="S2" value="7.869559901335153" />
+      <entry key="S5" value="12.179162106570976" />
+      <entry key="S10" value="16.4661508941251" />
+      <entry key="S30" value="29.240445826719316" />
+      <entry key="S60" value="41.14717775796737" />
+      <entry key="M2" value="59.23215888545812" />
+      <entry key="M5" value="97.63423060598058" />
+      <entry key="M10" value="134.69356865826757" />
+      <entry key="M15" value="160.4195963504125" />
+      <entry key="M30" value="208.47668788535913" />
+      <entry key="H1" value="250.59692770015224" />
+      <entry key="H2" value="279.5746702753178" />
+      <entry key="H4" value="296.7281987106296" />
+      <entry key="D1" value="312.6285241998358" />
+      <entry key="W1" value="315.51428100692567" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="1.2096086829141332E-215" />
+      <entry key="S2" value="1.8649243689592484E-54" />
+      <entry key="S5" value="3.223031050979493E-22" />
+      <entry key="S10" value="1.7952802151696247E-11" />
+      <entry key="S30" value="2.618448771528177E-4" />
+      <entry key="S60" value="0.016181621586010195" />
+      <entry key="M2" value="0.1272070231725642" />
+      <entry key="M5" value="0.4391703671536349" />
+      <entry key="M10" value="0.6910005059733999" />
+      <entry key="M15" value="0.8538749789548078" />
+      <entry key="M30" value="1.178562182695682" />
+      <entry key="H1" value="1.487649019572997" />
+      <entry key="H2" value="1.710577951224205" />
+      <entry key="H4" value="1.8457268510785962" />
+      <entry key="D1" value="1.9728379068673851" />
+      <entry key="W1" value="1.9960824862374682" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="1.522426640075803" />
+      <entry key="MS500" value="2.8250790242949493" />
+      <entry key="S2" value="7.8299967179045105" />
+      <entry key="S5" value="12.151894077238193" />
+      <entry key="S10" value="16.44034225707635" />
+      <entry key="S30" value="29.20541546571701" />
+      <entry key="S60" value="41.13187632752811" />
+      <entry key="M2" value="59.33449524402386" />
+      <entry key="M5" value="98.0569595942188" />
+      <entry key="M10" value="135.3736397951408" />
+      <entry key="M15" value="161.26495969700335" />
+      <entry key="M30" value="209.64983388364203" />
+      <entry key="H1" value="252.08135400289618" />
+      <entry key="H2" value="281.2834590290672" />
+      <entry key="H4" value="298.5729782399229" />
+      <entry key="D1" value="314.60119606838293" />
+      <entry key="W1" value="317.5103395619937" />
+    </decayedShown>
+  </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 8
@@ -32,25 +89,35 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.go.modules.go.list.on.any.changes.was.set&quot;: &quot;true&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1&quot;: &quot;true&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
-    &quot;go.sdk.automatically.set&quot;: &quot;true&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/JACKIE&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.GoLinterPluginOnboardingV2": "true",
+    "RunOnceActivity.GoLinterPluginStorageMigration": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.go.analysis.ui.options.defaults": "true",
+    "RunOnceActivity.go.formatter.settings.were.checked": "true",
+    "RunOnceActivity.go.migrated.go.modules.settings": "true",
+    "RunOnceActivity.go.modules.go.list.on.any.changes.was.set": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "refactor/tidy",
+    "go.import.settings.migrated": "true",
+    "go.sdk.automatically.set": "true",
+    "ignore.virus.scanning.warn.message": "true",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "C:/Users/JACKIE",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "to.speed.mode.migration.done": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="go build github.com/janghanul090801/pigo" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
       <module name="pigo" />
@@ -65,8 +132,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-gosdk-3b128438d3f6-07d2d2d66b1e-org.jetbrains.plugins.go.sharedIndexes.bundled-GO-251.29188.14" />
-        <option value="bundled-js-predefined-d6986cc7102b-09060db00ec0-JavaScript-GO-251.29188.14" />
+        <option value="bundled-gosdk-72a9cf600ed8-3dd3895e5e08-org.jetbrains.plugins.go.sharedIndexes.bundled-GO-261.26222.72" />
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-GO-261.26222.72" />
       </set>
     </attachedChunks>
   </component>
@@ -82,8 +149,5 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
-  </component>
-  <component name="VgoProject">
-    <settings-migrated>true</settings-migrated>
   </component>
 </project>

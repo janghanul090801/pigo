@@ -15,9 +15,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// uninstallCmd represents the uninstall command
-var uninstallCmd = &cobra.Command{
-	Use:                "uninstall",
+// removeCmd represents the remove command
+var removeCmd = &cobra.Command{
+	Use:                "remove",
 	Short:              "Uninstall package and remove from requirements.txt",
 	Long:               `Uninstall a package using pip and remove it from the requirements.txt file.`,
 	DisableFlagParsing: true,
@@ -108,5 +108,5 @@ var uninstallCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(uninstallCmd)
+	rootCmd.AddCommand(removeCmd)
 }

@@ -47,7 +47,13 @@ import os
 
 def parse_req_name(req_str):
     if not req_str: return ""
-    name = req_str.split('(')[0].split(';')[0].split('<')[0].split('>')[0].split('=')[0]
+    # extra 조건이 명시된 선택적 의존성은 런타임에 필요 없으므로 제외
+    if ';' in req_str:
+        condition = req_str.split(';', 1)[1]
+        if 'extra' in condition:
+            return ""
+    # PEP 508 대괄호 및 기타 조건식 처리 분할 추가
+    name = req_str.split('(')[0].split(';')[0].split('<')[0].split('>')[0].split('=')[0].split('[')[0]
     return name.strip().lower()
 
 def get_import_names_from_files(dist):
@@ -60,8 +66,8 @@ def get_import_names_from_files(dist):
         return []
 
     for path in dist.files:
-        # 경로는 보통 'jose/__init__.py' 또는 'six.py' 형태임
-        parts = str(path).split(os.sep)
+        # PackagePath는 PurePath 계열이므로 OS 구분자와 무관하게 path.parts로 안전하게 분할 가능
+        parts = path.parts
         
         # 최상위 경로가 .dist-info나 .egg-info면 무시
         if len(parts) > 0:
@@ -89,8 +95,14 @@ def get_package_info(package_names):
             dist = importlib.metadata.distribution(pkg)
             
             # 1. Imports 찾기 (top_level.txt 우선, 없으면 파일 분석)
-            if dist.read_text('top_level.txt'):
-                top_levels = dist.read_text('top_level.txt').split()
+            top_level_content = None
+            try:
+                top_level_content = dist.read_text('top_level.txt')
+            except Exception:
+                pass
+
+            if top_level_content:
+                top_levels = top_level_content.split()
                 info["imports"] = [t.strip() for t in top_levels if t.strip()]
             else:
                 # top_level.txt가 없으면 설치된 파일 리스트를 뒤진다 (여기가 핵심)
@@ -194,19 +206,80 @@ func getImportNames(n *sitter.Node, src []byte) []string {
 	return names
 }
 
-func isLocalModule(rootPath, moduleName string) bool {
+func isLocalModule(rootPath, currentFilePath, moduleName string) bool {
 	if strings.HasPrefix(moduleName, ".") {
 		return true
 	}
 	relPath := strings.ReplaceAll(moduleName, ".", string(os.PathSeparator))
-	absPath := filepath.Join(rootPath, relPath)
-	if _, err := os.Stat(absPath + ".py"); err == nil {
-		return true
+
+	dirsToSearch := []string{
+		filepath.Dir(currentFilePath),
+		rootPath,
+		filepath.Join(rootPath, "src"),
 	}
-	if _, err := os.Stat(filepath.Join(absPath, "__init__.py")); err == nil {
-		return true
+
+	for _, dir := range dirsToSearch {
+		absPath := filepath.Join(dir, relPath)
+		if _, err := os.Stat(absPath + ".py"); err == nil {
+			return true
+		}
+		if _, err := os.Stat(filepath.Join(absPath, "__init__.py")); err == nil {
+			return true
+		}
 	}
 	return false
+}
+
+func getPythonExecPath(searchPath string) string {
+	// 1. 활성화된 virtualenv 환경변수 확인
+	if venv := os.Getenv("VIRTUAL_ENV"); venv != "" {
+		var path string
+		if os.PathSeparator == '\\' {
+			path = filepath.Join(venv, "Scripts", "python.exe")
+		} else {
+			path = filepath.Join(venv, "bin", "python")
+		}
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	// 2. conda 환경변수 확인
+	if conda := os.Getenv("CONDA_PREFIX"); conda != "" {
+		var path string
+		if os.PathSeparator == '\\' {
+			path = filepath.Join(conda, "python.exe")
+		} else {
+			path = filepath.Join(conda, "bin", "python")
+		}
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	// 3. searchPath 하위나 상위에 흔히 쓰이는 .venv, venv 디렉토리 확인
+	candidates := []string{".venv", "venv", "env"}
+	for _, c := range candidates {
+		venvPath := filepath.Join(searchPath, c)
+		var path string
+		if os.PathSeparator == '\\' {
+			path = filepath.Join(venvPath, "Scripts", "python.exe")
+		} else {
+			path = filepath.Join(venvPath, "bin", "python")
+		}
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+
+		parentVenvPath := filepath.Join(filepath.Dir(searchPath), c)
+		if os.PathSeparator == '\\' {
+			path = filepath.Join(parentVenvPath, "Scripts", "python.exe")
+		} else {
+			path = filepath.Join(parentVenvPath, "bin", "python")
+		}
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	return "python"
 }
 
 func parsePackageName(line string) string {
@@ -232,12 +305,12 @@ func getRootModule(moduleName string) string {
 	return parts[0]
 }
 
-func fetchPackageInfo(packageNames []string) (map[string]PkgMeta, error) {
+func fetchPackageInfo(pythonExec string, packageNames []string) (map[string]PkgMeta, error) {
 	inputJSON, err := json.Marshal(packageNames)
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command("python", "-c", pythonMapperScript)
+	cmd := exec.Command(pythonExec, "-c", pythonMapperScript)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -255,6 +328,8 @@ func fetchPackageInfo(packageNames []string) (map[string]PkgMeta, error) {
 	return result, nil
 }
 
+var ignoreFlag []string
+
 var tidyCmd = &cobra.Command{
 	Use:   "tidy [path]",
 	Short: "Automatically remove unused packages",
@@ -269,6 +344,15 @@ var tidyCmd = &cobra.Command{
 
 		if _, err := os.Stat(reqPath); os.IsNotExist(err) {
 			log.Fatalf("requirements.txt not found")
+		}
+
+		// ignore list 준비
+		ignoreList := make(map[string]bool)
+		for k, v := range defaultIgnoreList {
+			ignoreList[k] = v
+		}
+		for _, val := range ignoreFlag {
+			ignoreList[strings.ToLower(strings.TrimSpace(val))] = true
 		}
 
 		fmt.Println("Reading requirements.txt...")
@@ -290,15 +374,30 @@ var tidyCmd = &cobra.Command{
 		}
 		reqFile.Close()
 
-		fmt.Println("Analyzing python environment (Smart Mode)...")
-		pkgInfoMap, _ := fetchPackageInfo(reqPackages)
+		pythonExec := getPythonExecPath(absSearchPath)
+		fmt.Printf("Analyzing python environment (Smart Mode) using: %s\n", pythonExec)
+		pkgInfoMap, err := fetchPackageInfo(pythonExec, reqPackages)
+		if err != nil {
+			fmt.Printf("Warning: Failed to fetch metadata using Python (%v). Falling back to static analysis.\n", err)
+			pkgInfoMap = make(map[string]PkgMeta)
+		}
 
 		fmt.Println("Scanning code imports...")
 		importedSet := make(map[string]bool)
 
 		files := []string{}
 		filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
-			if err == nil && !info.IsDir() && filepath.Ext(path) == ".py" {
+			if err != nil {
+				return nil
+			}
+			if info.IsDir() {
+				name := info.Name()
+				if name == ".venv" || name == "venv" || name == "env" || name == ".git" || name == ".idea" || name == "__pycache__" {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if filepath.Ext(path) == ".py" {
 				files = append(files, path)
 			}
 			return nil
@@ -308,6 +407,7 @@ var tidyCmd = &cobra.Command{
 		parser.SetLanguage(python.GetLanguage())
 
 		for _, filename := range files {
+			absFilename, _ := filepath.Abs(filename)
 			func() {
 				f, err := os.Open(filename)
 				if err != nil {
@@ -318,7 +418,7 @@ var tidyCmd = &cobra.Command{
 				tree := parser.Parse(nil, src)
 				imports := extractImports(tree.RootNode(), src)
 				for _, imp := range imports {
-					if !isLocalModule(absSearchPath, imp.Module) {
+					if !isLocalModule(absSearchPath, absFilename, imp.Module) {
 						importedSet[getRootModule(imp.Module)] = true
 						importedSet[imp.Module] = true
 					}
@@ -354,7 +454,7 @@ var tidyCmd = &cobra.Command{
 			pkgName := parsePackageName(line)
 			pkgLower := strings.ToLower(pkgName)
 
-			if pkgName == "" || defaultIgnoreList[pkgLower] {
+			if pkgName == "" || ignoreList[pkgLower] {
 				newLines = append(newLines, line)
 				continue
 			}
@@ -362,22 +462,11 @@ var tidyCmd = &cobra.Command{
 			isUsed := false
 
 			// 1. 메타데이터 매핑 확인
-			if meta, ok := pkgInfoMap[line]; ok { // 키값 주의
+			if meta, ok := pkgInfoMap[pkgName]; ok {
 				for _, importName := range meta.ImportNames {
 					if importedSet[importName] || importedSet[getRootModule(importName)] {
 						isUsed = true
 						break
-					}
-				}
-			}
-			// line 키로 못 찾으면 pkgName 키로 재시도
-			if !isUsed {
-				if meta, ok := pkgInfoMap[pkgName]; ok {
-					for _, importName := range meta.ImportNames {
-						if importedSet[importName] || importedSet[getRootModule(importName)] {
-							isUsed = true
-							break
-						}
 					}
 				}
 			}
@@ -429,5 +518,6 @@ var tidyCmd = &cobra.Command{
 }
 
 func init() {
+	tidyCmd.Flags().StringSliceVarP(&ignoreFlag, "ignore", "i", nil, "dependencies to ignore (comma separated)")
 	rootCmd.AddCommand(tidyCmd)
 }

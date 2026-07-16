@@ -25,16 +25,16 @@ pigo init
 프로젝트에 requirements.txt 와 .venv 를 세팅합니다. \
 requirements.txt 가 있을 경우 덮어 쓰지 않습니다.
 
-### install
+### get
 ```bash
-pigo install [option]
+pigo get [option]
 ```
 가상환경에 패키지를 설치합니다. [option] 은 pip 과 100% 호환됩니다.
 requirements.txt 를 자동으로 업데이트 합니다.
 
-### uninstall
+### remove
 ```bash
-pigo uninstall [option]
+pigo remove [option]
 ```
 가상환경에 패키지를 삭제합니다. [option] 은 pip 과 100% 호환됩니다.
 requirements.txt 를 자동으로 업데이트 합니다.
