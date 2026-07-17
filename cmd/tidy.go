@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/janghanul090801/pigo/utills"
 	sitter "github.com/smacker/go-tree-sitter"
 	python "github.com/smacker/go-tree-sitter/python"
 	"github.com/spf13/cobra"
@@ -230,58 +231,6 @@ func isLocalModule(rootPath, currentFilePath, moduleName string) bool {
 	return false
 }
 
-func getPythonExecPath(searchPath string) string {
-	// 1. 활성화된 virtualenv 환경변수 확인
-	if venv := os.Getenv("VIRTUAL_ENV"); venv != "" {
-		var path string
-		if os.PathSeparator == '\\' {
-			path = filepath.Join(venv, "Scripts", "python.exe")
-		} else {
-			path = filepath.Join(venv, "bin", "python")
-		}
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-	// 2. conda 환경변수 확인
-	if conda := os.Getenv("CONDA_PREFIX"); conda != "" {
-		var path string
-		if os.PathSeparator == '\\' {
-			path = filepath.Join(conda, "python.exe")
-		} else {
-			path = filepath.Join(conda, "bin", "python")
-		}
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-	// 3. searchPath 하위나 상위에 흔히 쓰이는 .venv, venv 디렉토리 확인
-	candidates := []string{".venv", "venv", "env"}
-	for _, c := range candidates {
-		venvPath := filepath.Join(searchPath, c)
-		var path string
-		if os.PathSeparator == '\\' {
-			path = filepath.Join(venvPath, "Scripts", "python.exe")
-		} else {
-			path = filepath.Join(venvPath, "bin", "python")
-		}
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-
-		parentVenvPath := filepath.Join(filepath.Dir(searchPath), c)
-		if os.PathSeparator == '\\' {
-			path = filepath.Join(parentVenvPath, "Scripts", "python.exe")
-		} else {
-			path = filepath.Join(parentVenvPath, "bin", "python")
-		}
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-	return "python"
-}
-
 func parsePackageName(line string) string {
 	if idx := strings.Index(line, "#"); idx != -1 {
 		line = line[:idx]
@@ -374,7 +323,7 @@ var tidyCmd = &cobra.Command{
 		}
 		reqFile.Close()
 
-		pythonExec := getPythonExecPath(absSearchPath)
+		pythonExec := utills.GetVenvExecPath(absSearchPath, "python")
 		fmt.Printf("Analyzing python environment (Smart Mode) using: %s\n", pythonExec)
 		pkgInfoMap, err := fetchPackageInfo(pythonExec, reqPackages)
 		if err != nil {

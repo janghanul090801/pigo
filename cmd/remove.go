@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
-	_const "github.com/janghanul090801/pigo/cmd/const"
+	"github.com/janghanul090801/pigo/utills"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +23,7 @@ var removeCmd = &cobra.Command{
 	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		uninstallArgs := append([]string{"uninstall"}, args...)
-		uninstallCmd := exec.Command(_const.PIPPATHWINDOW, uninstallArgs...)
+		uninstallCmd := exec.Command(utills.GetVenvExecPath(".", "pip"), uninstallArgs...)
 		uninstallCmd.Stdout = os.Stdout
 		uninstallCmd.Stderr = os.Stderr
 		uninstallCmd.Stdin = os.Stdin

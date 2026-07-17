@@ -4,11 +4,12 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	_const "github.com/janghanul090801/pigo/cmd/const"
-	"github.com/spf13/cobra"
 	"log"
 	"os"
 	"os/exec"
+
+	"github.com/janghanul090801/pigo/utills"
+	"github.com/spf13/cobra"
 )
 
 // runCmd represents the run command
@@ -24,7 +25,7 @@ to quickly create a Cobra application.`,
 	DisableFlagParsing: true,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		runCmd := exec.Command(_const.PYTHONPATHWINDOW, args...)
+		runCmd := exec.Command(utills.GetVenvExecPath(".", "python"), args...)
 		runCmd.Stdout = os.Stdout
 		runCmd.Stderr = os.Stderr
 		runCmd.Stdin = os.Stdin

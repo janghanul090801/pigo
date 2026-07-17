@@ -12,7 +12,7 @@ import (
 	"os/exec"
 	"strings"
 
-	_const "github.com/janghanul090801/pigo/cmd/const"
+	"github.com/janghanul090801/pigo/utills"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ to quickly create a Cobra application.`,
 	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		installArgs := append([]string{"install"}, args...)
-		installCmd := exec.Command(_const.PIPPATHWINDOW, installArgs...)
+		installCmd := exec.Command(utills.GetVenvExecPath(".", "pip"), installArgs...)
 		installCmd.Stdout = os.Stdout
 		installCmd.Stderr = os.Stderr
 		installCmd.Stdin = os.Stdin
@@ -50,7 +50,7 @@ to quickly create a Cobra application.`,
 		}
 
 		showArgs := append([]string{"show"}, targetPackages...)
-		showCmd := exec.Command(_const.PIPPATHWINDOW, showArgs...)
+		showCmd := exec.Command(utills.GetVenvExecPath(".", "pip"), showArgs...)
 
 		var out bytes.Buffer
 		showCmd.Stdout = &out
