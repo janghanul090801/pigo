@@ -438,10 +438,6 @@ func fetchPackageInfo(
 	return result, nil
 }
 
-// ------------------------------------------------------------
-// venv에 없는 requirements 설치
-// ------------------------------------------------------------
-
 func installMissingPackages(
 	pythonExec string,
 	requirementLines []string,
@@ -461,12 +457,10 @@ func installMissingPackages(
 
 		pkgLower := strings.ToLower(pkgName)
 
-		// ignore 목록은 설치 검사에서도 제외
 		if ignoreList[pkgLower] {
 			continue
 		}
 
-		// 현재 venv의 Python으로 패키지 설치 여부 확인
 		checkCmd := exec.Command(
 			pythonExec,
 			"-c",
@@ -492,18 +486,10 @@ except importlib.metadata.PackageNotFoundError:
 		}
 	}
 
-	// --------------------------------------------------------
-	// 설치할 패키지가 없음
-	// --------------------------------------------------------
-
 	if len(missingRequirements) == 0 {
 		fmt.Println("All requirements are already installed.")
 		return nil
 	}
-
-	// --------------------------------------------------------
-	// 설치할 패키지 출력
-	// --------------------------------------------------------
 
 	fmt.Println("\nMissing packages:")
 
@@ -512,17 +498,6 @@ except importlib.metadata.PackageNotFoundError:
 	}
 
 	fmt.Println("\nInstalling missing packages...")
-
-	// --------------------------------------------------------
-	// requirements.txt의 원본 requirement를 그대로 전달
-	//
-	// 예:
-	// fastapi==0.116.1
-	// uvicorn>=0.35.0
-	// pydantic[email]
-	//
-	// 버전 조건 및 extras를 유지한다.
-	// --------------------------------------------------------
 
 	args := []string{
 		"-m",
@@ -571,10 +546,6 @@ After cleaning requirements.txt, packages that are missing
 from the current virtual environment are automatically installed.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		// --------------------------------------------------------
-		// 1. 프로젝트 경로
-		// --------------------------------------------------------
-
 		searchPath := "."
 
 		if len(args) > 0 {
@@ -602,10 +573,6 @@ from the current virtual environment are automatically installed.`,
 			)
 		}
 
-		// --------------------------------------------------------
-		// 2. Ignore 목록
-		// --------------------------------------------------------
-
 		ignoreList := make(map[string]bool)
 
 		for k, v := range defaultIgnoreList {
@@ -617,10 +584,6 @@ from the current virtual environment are automatically installed.`,
 				strings.TrimSpace(val),
 			)] = true
 		}
-
-		// --------------------------------------------------------
-		// 3. requirements.txt 읽기
-		// --------------------------------------------------------
 
 		fmt.Println("Reading requirements.txt...")
 
@@ -664,10 +627,6 @@ from the current virtual environment are automatically installed.`,
 
 		reqFile.Close()
 
-		// --------------------------------------------------------
-		// 4. venv Python 찾기
-		// --------------------------------------------------------
-
 		pythonExec := utills.GetVenvExecPath(
 			absSearchPath,
 			"python",
@@ -677,10 +636,6 @@ from the current virtual environment are automatically installed.`,
 			"Analyzing python environment (Smart Mode) using: %s\n",
 			pythonExec,
 		)
-
-		// --------------------------------------------------------
-		// 5. 패키지 메타데이터 분석
-		// --------------------------------------------------------
 
 		pkgInfoMap, err := fetchPackageInfo(
 			pythonExec,
@@ -696,10 +651,6 @@ from the current virtual environment are automatically installed.`,
 
 			pkgInfoMap = make(map[string]PkgMeta)
 		}
-
-		// --------------------------------------------------------
-		// 6. Python 코드 import 분석
-		// --------------------------------------------------------
 
 		fmt.Println("Scanning code imports...")
 
@@ -811,10 +762,6 @@ from the current virtual environment are automatically installed.`,
 			}()
 		}
 
-		// --------------------------------------------------------
-		// 7. 의존성 보호 목록 생성
-		// --------------------------------------------------------
-
 		protectedDeps := make(map[string]bool)
 
 		for _, meta := range pkgInfoMap {
@@ -839,10 +786,6 @@ from the current virtual environment are automatically installed.`,
 			}
 		}
 
-		// --------------------------------------------------------
-		// 8. requirements.txt 정리
-		// --------------------------------------------------------
-
 		fmt.Println("Cleaning up...")
 
 		var newLines []string
@@ -855,7 +798,6 @@ from the current virtual environment are automatically installed.`,
 
 			pkgLower := strings.ToLower(pkgName)
 
-			// 빈 줄 / 주석 / ignore
 			if pkgName == "" ||
 				ignoreList[pkgLower] {
 
@@ -869,10 +811,6 @@ from the current virtual environment are automatically installed.`,
 
 			isUsed := false
 
-			// ----------------------------------------------------
-			// 8-1. 메타데이터 기반 매핑
-			// ----------------------------------------------------
-
 			if meta, ok := pkgInfoMap[pkgName]; ok {
 
 				for _, importName := range meta.ImportNames {
@@ -885,10 +823,6 @@ from the current virtual environment are automatically installed.`,
 					}
 				}
 			}
-
-			// ----------------------------------------------------
-			// 8-2. 단순 이름 일치 fallback
-			// ----------------------------------------------------
 
 			if !isUsed {
 
@@ -912,19 +846,11 @@ from the current virtual environment are automatically installed.`,
 				}
 			}
 
-			// ----------------------------------------------------
-			// 8-3. 의존성 보호
-			// ----------------------------------------------------
-
 			if !isUsed &&
 				protectedDeps[pkgLower] {
 
 				isUsed = true
 			}
-
-			// ----------------------------------------------------
-			// 8-4. 결과 처리
-			// ----------------------------------------------------
 
 			if isUsed {
 
@@ -943,10 +869,6 @@ from the current virtual environment are automatically installed.`,
 				removedCount++
 			}
 		}
-
-		// --------------------------------------------------------
-		// 9. requirements.txt 저장
-		// --------------------------------------------------------
 
 		if removedCount > 0 {
 
@@ -990,18 +912,6 @@ from the current virtual environment are automatically installed.`,
 			)
 		}
 
-		// --------------------------------------------------------
-		// 10. requirements.txt 기준으로 venv 동기화
-		// --------------------------------------------------------
-
-		// 중요:
-		// 여기서는 originalLines가 아니라 newLines를 사용한다.
-		//
-		// 즉 tidy가 제거한 패키지는 다시 설치하지 않는다.
-		//
-		// removedCount == 0이면 originalLines == newLines와
-		// 동일한 효과를 가진다.
-
 		finalRequirementLines := newLines
 
 		if err := installMissingPackages(
@@ -1015,10 +925,6 @@ from the current virtual environment are automatically installed.`,
 				err,
 			)
 		}
-
-		// --------------------------------------------------------
-		// 11. 완료
-		// --------------------------------------------------------
 
 		fmt.Println("\nTidy completed successfully.")
 	},
