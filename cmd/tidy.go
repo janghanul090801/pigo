@@ -522,11 +522,8 @@ func resolvePackageName(
 
 	root := getRootModule(importName)
 
-	// 흔히 import 이름과 pip 이름이 다른 패키지
-	if pkg, ok := importPackageAliases[root]; ok {
-		return pkg, false, nil
-	}
-
+	// 1) Python 메타데이터로 distribution 이름 확인 (가장 신뢰성 높음)
+	//    importlib.metadata.packages_distributions()를 사용한 정식 조회
 	inputJSON, err := json.Marshal(map[string]interface{}{
 		"mode":   "distribution_for_import",
 		"import": root,
@@ -580,8 +577,12 @@ func resolvePackageName(
 		return result.Distribution, false, nil
 	}
 
-	// metadata로 찾을 수 없는 경우
-	// 가장 일반적인 경우에는 import 이름 == pip 이름
+	// 2) metadata에 없으면 aliases map 확인 (보조적인 힌트 수준)
+	if pkg, ok := importPackageAliases[root]; ok {
+		return pkg, false, nil
+	}
+
+	// 3) 그래도 못 찾으면 import 이름 그대로 pip 이름 가정 (기본값)
 	return root, false, nil
 }
 
